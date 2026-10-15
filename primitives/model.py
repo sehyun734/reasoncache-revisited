@@ -10,15 +10,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, DynamicCache, PreT
 
 
 def load_model(
-    organization: str,
     model_name: str,
     attn_implementation: str = "sdpa",
 ) -> tuple[PreTrainedModel, PreTrainedTokenizerBase]:
-    # llama tokenizer는 pad 토큰이 없어 generate의 pad_token_id에서 오류.
-    # 따라서 없으면 eos를 pad로 씀.
-    tokenizer = AutoTokenizer.from_pretrained(f"{organization}/{model_name}")
+    # llama tokenizer는 pad 토큰이 없어 generate에서 오류가 남.
+    # 따라서 eos를 pad로 씀.
+    tokenizer = AutoTokenizer.from_pretrained(f"meta-llama/{model_name}")
     tokenizer.pad_token = tokenizer.pad_token or tokenizer.eos_token
-    model = AutoModelForCausalLM.from_pretrained(f"{organization}/{model_name}", attn_implementation=attn_implementation, dtype=torch.bfloat16, device_map="auto")
+    model = AutoModelForCausalLM.from_pretrained(f"meta-llama/{model_name}", attn_implementation=attn_implementation, dtype=torch.bfloat16, device_map="auto")
     model.requires_grad_(False)
     return model, tokenizer
 
@@ -45,6 +44,8 @@ def generate(
     cache_len = cache.get_seq_length() if cache is not None else 0
     input_ids = pad_sequence(question_ids, batch_first=True, padding_value=tokenizer.pad_token_id, padding_side="left")
     attention_mask = pad_sequence([torch.ones_like(sample_question_ids) for sample_question_ids in question_ids], batch_first=True, padding_side="left")
+    # generate는 input_ids 앞에서 cache 길이만큼을 이미 처리한 토큰으로 보고 건너뜀.
+    # 따라서 prefix 길이만큼 앞을 채우고, attention_mask는 prefix를 보도록 1로 채움.
     input_ids = pad(input_ids, (cache_len, 0), value=tokenizer.pad_token_id)
     attention_mask = pad(attention_mask, (cache_len, 0), value=1)
 
@@ -66,14 +67,21 @@ def hook_lora(
     lora: dict[str, Tensor],
     scale: float = 1.0,
 ) -> list[RemovableHandle]:
-    def make_hook(a: Tensor, b: Tensor) -> Callable:
-        def hook(module: Module, args: tuple[Tensor], output: Tensor) -> Tensor:
+    def make_hook(
+        a: Tensor,
+        b: Tensor,
+    ) -> Callable:
+        def hook(
+            module: Module,
+            args: tuple[Tensor],
+            output: Tensor,
+        ) -> Tensor:
             return output + args[0] @ a.to(output.dtype).T @ b.to(output.dtype).T * scale
 
         return hook
 
     handles = []
-    for module_name in {key.rsplit(".", 1)[0] for key in lora}:
+    for module_name in {name.rsplit(".", 1)[0] for name in lora}:
         hook = make_hook(lora[f"{module_name}.a"], lora[f"{module_name}.b"])
         handles.append(model.get_submodule(module_name).register_forward_hook(hook))
     return handles

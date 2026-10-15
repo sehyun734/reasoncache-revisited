@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
+from statistics import mean
 
-import numpy as np
 from simple_parsing import parse
 
-from primitives.plot import load_runs, plot_correlations
+from primitives.plot import load_runs, plot_correlations, save_figure
 
 
 @dataclass
@@ -16,11 +16,12 @@ class Config:
 
 def main() -> None:
     config = parse(Config)
-    runs = load_runs(config.model_name, "vrank", f"num_samples={config.num_samples}", f"num_samples={config.gsm8k_num_samples}")
+    runs = load_runs("vrank", config.model_name, f"num_samples={config.num_samples}", f"num_samples={config.gsm8k_num_samples}")
+    # layer별 지표는 마지막 layer만 head 평균으로 봄.
     for run in runs:
-        run |= {name: float(np.mean(stat[-1])) if isinstance(stat, list) else stat for name, stat in run.pop("stats").items()}
-    stat_names = ["vrank", "new_ratio", "prefix_vrank", "prefix_new_ratio", "hidden_rank"]
-    plot_correlations(runs, stat_names, f"{config.model_name} vrank", Path(f"figures/{config.model_name}/vrank.png"))
+        run |= {name: mean(stat[-1]) if isinstance(stat, list) else stat for name, stat in run.pop("stats").items()}
+    fig = plot_correlations(runs, ["vrank", "new_ratio", "prefix_vrank", "prefix_new_ratio", "hidden_rank"], f"{config.model_name} vrank")
+    save_figure(fig, Path(f"figures/{config.model_name}/vrank.png"))
 
 
 if __name__ == "__main__":
