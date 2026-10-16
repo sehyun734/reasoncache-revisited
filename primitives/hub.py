@@ -7,7 +7,7 @@ from torch import Tensor
 
 
 def get_repo_name() -> str:
-    return f"{HfApi().whoami()['name']}/vrank-vs-attn-patterns"
+    return f"{HfApi().whoami()['name']}/reasoncache-revisited"
 
 
 def make_lora_path(

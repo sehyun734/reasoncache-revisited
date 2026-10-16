@@ -1,4 +1,4 @@
-# vrank vs attention patterns
+# reasoncache revisited
 
 ## 배경
 
@@ -14,11 +14,11 @@
 - 입력 토큰에 새 방향을 더 많이 만드는 쪽은 오히려 lora임.
 - 입력 토큰의 new_ratio는 방법 안과 방법 간 모두 정확도와 함께 움직임.
 - attention 패턴도 정확도 차이를 설명하지 못함.
-- prefix tuning에서는 prefix가 sink와 입력 토큰의 attention을 가져가, prefix-tuning+의 관찰과 같음.
+- prefix tuning에서는 prefix가 sink와 입력 토큰의 attention을 가져감.
 
 ## 한계
 
-- 리소스 때문에 모델(llama 2 7b 대 llama 3.2 1b), 학습 데이터(metamathqa 전체 대 gsm 유형 32768개), learning rate(모든 방법 2e-5 대 1e-4~3e-3), 평가(lm-evaluation-harness 대 직접 채점)를 reasoncache와 다르게 골라, 재현 실험으로는 적절하지 않음.
+- 모델(llama 2 7b 대 llama 3.2 1b), 학습 데이터(metamathqa 전체 대 gsm 유형 32768개), 평가(lm-evaluation-harness 대 직접 채점)를 reasoncache와 다르게 골라, 재현 실험으로는 적절하지 않음.
 - 이 차이들을 한꺼번에 바꿔, 재현 실패의 원인을 가르지 못함.
 - seed 0 하나만 돌림.
 - learning rate가 최적을 넘으면 hidden_rank와 jsd가 방법마다 다르게 움직여, 방법 안의 상관이 정확도를 따르는 것인지 학습량을 따르는 것인지 나누지 못함.
@@ -32,8 +32,6 @@ $$\text{lora: } \text{rank}(X(W_V + \Delta_V)) \le \text{rank}(X)$$
 $$\text{prefix tuning: } \text{rank}(\text{concat}(P_V,\ XW_V)) \le \text{rank}(P_V) + \text{rank}(X)$$
 
 실험에서는 gsm8k, math, gpqa 등에서 prefix tuning이 lora를 넘거나 비슷하고, 마지막 hidden의 effective rank도 prefix tuning이 가장 높다고 보고함.
-
-lora가 prefix tuning보다 정확도가 높은 것은 [llm-adapters](https://arxiv.org/abs/2304.01933)에서도 보고됐고, prefix가 입력 토큰의 attention을 가져가는 것은 [prefix-tuning+](https://arxiv.org/abs/2506.13674)에서도 보고됨.
 
 ## prefix tuning이 lora보다 정확도가 높은지
 
