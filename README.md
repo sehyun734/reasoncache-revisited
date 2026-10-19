@@ -19,7 +19,7 @@
 ## 한계
 
 - 모델(llama 2 7b 대 llama 3.2 1b), 학습 데이터(metamathqa 전체 대 gsm 유형 32768개), 평가(lm-evaluation-harness 대 직접 채점)를 reasoncache와 다르게 골라, 재현 실험으로는 적절하지 않음.
-- 이 차이들을 한꺼번에 바꿔, 재현 실패의 원인을 가르지 못함.
+- 재현 실패의 원인을 가르지 못함.
 - seed 0 하나만 돌림.
 - learning rate가 최적을 넘으면 hidden_rank와 jsd가 방법마다 다르게 움직여, 방법 안의 상관이 정확도를 따르는 것인지 학습량을 따르는 것인지 나누지 못함.
 
